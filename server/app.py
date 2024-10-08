@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify, make_response # type: ignore
-from flask_cors import CORS # type: ignore
-from flask_migrate import Migrate # type: ignore
+from flask import Flask, request, jsonify, make_response  # type: ignore
+from flask_cors import CORS  # type: ignore
+from flask_migrate import Migrate  # type: ignore
 from models import db, Message, User
 
 app = Flask(__name__)
@@ -24,11 +24,18 @@ def messages():
 
 @app.route('/messages', methods=['POST'])
 def messages_post():
-    message = request.json
-    new_message = Message(text=message['text'])
+    message_data = request.json
+    if 'text' not in message_data or 'user_id' not in message_data:
+        return make_response(jsonify({"error": "Invalid input"}), 400)
+    
+    new_message = Message(
+        text=message_data['text'],
+        user_id=message_data['user_id']
+    )
     db.session.add(new_message)
     db.session.commit()
     return jsonify(new_message.to_dict()), 201
+
 
 @app.route('/messages/<int:id>', methods=['GET'])
 def messages_by_id(id):
@@ -45,6 +52,8 @@ def users():
 @app.route('/users', methods=['POST'])
 def users_post():
     user = request.json
+    if 'name' not in user:
+        return make_response(jsonify({"error": "Invalid input"}), 400)
     new_user = User(name=user['name'])
     db.session.add(new_user)
     db.session.commit()
@@ -55,6 +64,36 @@ def users_by_id(id):
     user = User.query.get(id)
     if user:
         return jsonify(user.to_dict()), 200
+    return make_response(jsonify({"error": "User not found"}), 404)
+
+@app.route('/messages/<int:id>', methods=['DELETE'])
+def messages_by_id_delete(id):
+    message = Message.query.get(id)
+    if message:
+        db.session.delete(message)
+        db.session.commit()
+        return jsonify({"message": "Message deleted"}), 200
+    return make_response(jsonify({"error": "Message not found"}), 404)
+
+@app.route('/messages/<int:id>', methods=['PATCH'])
+def messages_by_id_patch(id):
+    message = Message.query.get(id)
+    if message:
+        data = request.json
+        if 'text' not in data:
+            return make_response(jsonify({"error": "Invalid input"}), 400)
+        message.text = data['text']
+        db.session.commit()
+        return jsonify(message.to_dict()), 200
+    return make_response(jsonify({"error": "Message not found"}), 404)
+
+@app.route('/users/<int:id>', methods=['DELETE'])
+def users_by_id_delete(id):
+    user = User.query.get(id)
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "User deleted"}), 200
     return make_response(jsonify({"error": "User not found"}), 404)
 
 if __name__ == '__main__':
