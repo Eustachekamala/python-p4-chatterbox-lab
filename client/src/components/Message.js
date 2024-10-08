@@ -4,18 +4,22 @@ import EditMessage from "./EditMessage";
 function Message({ message, currentUser, onMessageDelete, onUpdateMessage }) {
   const [isEditing, setIsEditing] = useState(false);
 
-  const { id, username, body, created_at: createdAt } = message;
-
+  const { id, username, text: body, created_at: createdAt } = message;
   const timestamp = new Date(createdAt).toLocaleTimeString();
-
   const isCurrentUser = currentUser.username === username;
 
-  function handleDeleteClick() {
-    fetch(`http://127.0.0.1:4000/messages/${id}`, {
-      method: "DELETE",
-    });
-
-    onMessageDelete(id);
+  async function handleDeleteClick() {
+    try {
+      const response = await fetch(`http://127.0.0.1:5555/messages/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete message");
+      }
+      onMessageDelete(id);
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
   }
 
   function handleUpdateMessage(updatedMessage) {
@@ -36,9 +40,9 @@ function Message({ message, currentUser, onMessageDelete, onUpdateMessage }) {
       ) : (
         <p>{body}</p>
       )}
-      {isCurrentUser ? (
+      {isCurrentUser && (
         <div className="actions">
-          <button onClick={() => setIsEditing((isEditing) => !isEditing)}>
+          <button onClick={() => setIsEditing((prev) => !prev)}>
             <span role="img" aria-label="edit">
               ✏️
             </span>
@@ -49,7 +53,7 @@ function Message({ message, currentUser, onMessageDelete, onUpdateMessage }) {
             </span>
           </button>
         </div>
-      ) : null}
+      )}
     </li>
   );
 }
